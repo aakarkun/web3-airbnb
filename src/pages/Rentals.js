@@ -1,12 +1,11 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import "./Rentals.css";
 import { Link } from "react-router-dom";
 import logo from '../images/airbnbRed.png';
-
 import { useLocation } from "react-router";
-import { Button, ConnectButton, Icon } from "web3uikit";
-
+import { Button, ConnectButton, Icon, Loading } from "web3uikit";
 import RentalsMap from "../components/RentalsMap";
+import { useMoralis, useWeb3ExecuteFunction } from 'react-moralis';
 
 const Rentals = () => {
 
@@ -14,46 +13,32 @@ const Rentals = () => {
   const { state: searchFilters } = useLocation();
   // Google map highlight
   const [highlight, setHighlight] = useState();
+  const { Moralis } = useMoralis();
+  const [rentalsList, setRentalsList] = useState();
+  const [coOrdinates, setCoOrdinates] = useState();
 
-  // Dummy rental list
-  const rentalList = [
-    {
-      attributes: {
-        city: "New South Wales",
-        unoDescription: "3 Guests • 2 Beds • 2 Rooms",
-        dosDescription: "Wifi • Kitchen • Living Area",
-        imgUrl:
-        // "https://a0.muscache.com/im/pictures/miso/Hosting-53710248/original/3e07cb85-4c06-4ef2-a48e-b13e25809722.jpeg?im_w=1200",
-          "https://a0.muscache.com/im/pictures/miso/Hosting-53710248/original/04612220-51a9-414f-93ac-1e527f43c6e2.jpeg?im_w=1200",
-        lat: "-33.870453",
-        long: "151.208755",
-        name: "The Luxurious Apartment with Courtyard",
-        pricePerDay: "3",
-      },
-    },
-    {
-      attributes: {
-        city: "Tasmania",
-        unoDescription: "2 Guests • 1 Bed • 1 Private bath",
-        dosDescription: "Wifi • Kitchen • Living Area • Balcony",
-        imgUrl:
-        "https://a0.muscache.com/im/pictures/miso/Hosting-574073295058124098/original/b29ff371-ee86-4740-8f03-73e8ce948c60.jpeg?im_w=1200",  
-        lat: "-41.640079",
-        long: "146.315918",
-        name: "Boat Reflections Acc Franklin",
-        pricePerDay: "4",
-      },
-    },
-  ];
+  useEffect(() => {
 
-  let cords = [];
+    async function fetchRentalsList() {
+      
+      const Rentals = Moralis.Object.extend("Rentals");
+      const query = new Moralis.Query(Rentals);
+      query.equalTo("city", searchFilters.destination);
+      query.greaterThanOrEqualTo("maxGuests_decimal", searchFilters.guests);
 
-  rentalList.forEach((e) => {
-    cords.push({
-      lat: e.attributes.lat,
-      lng: e.attributes.long
-    })
-  })
+      const result = await query.find();
+      let cords = [];
+      result.forEach((e, i) => {
+        cords.push({
+          lat: e.attributes.lat,
+          lng: e.attributes.long
+        })
+      })
+      setCoOrdinates(cords);
+      setRentalsList(result);
+    }
+    fetchRentalsList();
+  }, [searchFilters])
 
   return (
     <>
@@ -105,8 +90,8 @@ const Rentals = () => {
      <div className="rentalsContent">
        <div className="rentalsContentL">
             Stays Available For Your Destination
-            {rentalList &&
-            rentalList.map((e, i) => {
+            {rentalsList &&
+            rentalsList.map((e, i) => {
               return(
                 <>
                   <hr className="line2" />
@@ -135,7 +120,10 @@ const Rentals = () => {
             })}
        </div>
        <div className="rentalsContentR">
-        <RentalsMap locations={cords} setHighlight={setHighlight}/>
+        { coOrdinates ? (
+          <RentalsMap locations={coOrdinates} setHighlight={setHighlight}/>
+        ) : <Loading />
+        } 
        </div>
      </div>
 

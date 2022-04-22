@@ -11,7 +11,7 @@ const Home = () => {
   // Defining all the state variables
   const [checkIn, setCheckIn] = useState(new Date());
   const [checkOut, setCheckOut] = useState(new Date());
-  const [destination, setDestination] = useState("New South Wales");
+  const [destination, setDestination] = useState("Sydney");
   const [guests, setGuests] = useState(2);
 
   return (
@@ -49,12 +49,12 @@ const Home = () => {
               onChange={(data) => setDestination(data.label)}
               options={[
                 {
-                  id: "nsw",
-                  label: "New South Wales"
+                  id: "syd",
+                  label: "Sydney"
                 },
                 {
-                  id: "qld",
-                  label: "Queensland"
+                  id: "rdf",
+                  label: "Redfern"
                 },
                 {
                   id: "tas",
