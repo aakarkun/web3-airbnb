@@ -3,7 +3,7 @@ import "./Rentals.css";
 import { Link } from "react-router-dom";
 import logo from '../images/airbnbRed.png';
 import { useLocation } from "react-router";
-import { Button, ConnectButton, Icon, Loading } from "web3uikit";
+import { Button, ConnectButton, Icon, Loading, useNotification } from "web3uikit";
 import RentalsMap from "../components/RentalsMap";
 import { useMoralis, useWeb3ExecuteFunction } from 'react-moralis';
 
@@ -13,10 +13,39 @@ const Rentals = () => {
   const { state: searchFilters } = useLocation();
   // Google map highlight
   const [highlight, setHighlight] = useState();
-  const { Moralis } = useMoralis();
+  const { Moralis, account } = useMoralis();
   const [rentalsList, setRentalsList] = useState();
   const [coOrdinates, setCoOrdinates] = useState();
+  const contractProcessor = useWeb3ExecuteFunction();
+  const dispatch = useNotification();
 
+  const handleSuccess = () => {
+    dispatch({
+      type: "success",
+      message: `Nice! You are going to ${searchFilters.destination}!!`,
+      title: "Booking Successful",
+      position: "topL"
+    });
+  };
+
+  const handleError = (msg) => {
+    dispatch({
+      type: "error",
+      message: `${msg}`,
+      title: "Booking Failed",
+      position: "topL"
+    })
+  };
+
+  const handleNoAccount = () => {
+    dispatch({
+      type: "error",
+      message: 'You need to connect your wallet to book a rental',
+      title: "Booking Failed",
+      position: "topL"
+    })
+  }
+ 
   useEffect(() => {
 
     async function fetchRentalsList() {
@@ -38,7 +67,57 @@ const Rentals = () => {
       setRentalsList(result);
     }
     fetchRentalsList();
-  }, [searchFilters])
+  }, [searchFilters]);
+
+  const bookRental = async function(start, end, id, dayPrice) {
+
+    for(
+      var arr = [], dt = new Date(start); dt <= end; dt.setDate(dt.getDate() + 1)
+    ) {
+      // yyyy-mm-dd
+      arr.push(new Date(dt).toISOString().slice(0, 10));
+    }
+
+    let options = {
+      contractAddress: "0x0566e8C3D56b91bE4Ede3A41B7CD412fbC956aaB",
+      functionName: "addDatesBooked",
+      abi: [
+        {
+          "inputs": [
+            {
+              "internalType": "uint256",
+              "name": "id",
+              "type": "uint256"
+            },
+            {
+              "internalType": "string[]",
+              "name": "newBookings",
+              "type": "string[]"
+            }
+          ],
+          "name": "addDatesBooked",
+          "outputs": [],
+          "stateMutability": "payable",
+          "type": "function"
+        }
+      ],
+      params: {
+        id: id,
+        newBookings: arr
+      },
+      msgValue: Moralis.Units.ETH(dayPrice * arr.length)
+    }
+
+    await contractProcessor.fetch({
+      params: options,
+      onSuccess: () => {
+        handleSuccess();
+      },
+      onError: (error) => {
+        handleError(error.data.message)
+      }
+    });
+  }
 
   return (
     <>
@@ -107,6 +186,18 @@ const Rentals = () => {
                       </div>
                       <div className="bottomButton">
                         <Button
+                          onClick={() => {
+                            if(account) {
+                              bookRental(
+                                searchFilters.checkIn,
+                                searchFilters.checkOut,
+                                e.attributes.uid_decimal.value.$numberDecimal,
+                                Number(e.attributes.pricePerDay_decimal.value.$numberDecimal)
+                              )
+                            } else {
+                              handleNoAccount();
+                            }
+                          }}
                           text="Stay Here"
                         />
                         <div className="price">
