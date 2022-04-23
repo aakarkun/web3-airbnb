@@ -6,6 +6,7 @@ import { useLocation } from "react-router";
 import { Button, ConnectButton, Icon, Loading, useNotification } from "web3uikit";
 import RentalsMap from "../components/RentalsMap";
 import { useMoralis, useWeb3ExecuteFunction } from 'react-moralis';
+import User from "../components/User";
 
 const Rentals = () => {
 
@@ -161,6 +162,9 @@ const Rentals = () => {
        </div>
       {/* Connect Wallet Button for Web3 connection - using web3uikit  */}
        <div className="lrContainers">
+         {account && 
+          <User account={account}></User>
+         }
          <ConnectButton />
        </div>
      </div>
